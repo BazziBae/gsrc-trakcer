@@ -47,8 +47,8 @@
         .ev-title { font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px; }
         .ev-date { font-size: 11px; font-family: monospace; color: var(--accent); background: rgba(245, 158, 11, 0.1); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.2); }
 
-        #map-container { position: relative; flex: 1; width: 100%; }
-        #map { width: 100%; height: 100%; z-index: 1; background: #1a1a1a; }
+        #map-container { position: relative; flex: 1; width: 100%; min-height: 250px; }
+        #map { width: 100%; height: 100%; z-index: 1; background: #e2e8f0; }
         
         .map-tools { position: absolute; top: 12px; left: 12px; z-index: 500; display: flex; gap: 6px; }
         .tool-btn {
@@ -92,8 +92,16 @@
         }
         .track-btn.active { background: #3b82f6; color: #fff; }
 
-        .km-marker { background: #1e293b; color: #e2e8f0; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 12px; border: 1.5px solid #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.4); white-space: nowrap; }
-        .km-marker.start { background: #10b981; color: #fff; border-color: #059669; }
+        .gsrc-pin { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); z-index: 600; }
+        .gsrc-pin-bubble {
+            background: #0f172a; color: #fff; padding: 4px 10px; border-radius: 16px; font-weight: 800;
+            font-size: 11px; border: 2px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            white-space: nowrap; display: flex; align-items: center; gap: 6px;
+        }
+        .gsrc-pin-tail { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--accent); margin-top: -1px; }
+
+        .km-marker { background: #1e293b; color: #e2e8f0; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 12px; border: 1.5px solid #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.4); white-space: nowrap; z-index: 400; }
+        .km-marker.start { background: #10b981; color: #fff; border-color: #059669; font-weight: 900; }
         .km-marker.finish { background: #f59e0b; color: #000; border-color: #d97706; font-weight: 900; }
     </style>
 </head>
@@ -124,7 +132,7 @@
             </svg>
             <div class="brand-title">MARATHON TRACKER<br><span class="creator-tag">made by Baebazzi</span></div>
         </div>
-        <div class="status-pill">⏳ 대회 대기 중</div>
+        <div class="status-pill">⚡ 실시간 자동 연동 중</div>
     </header>
 
     <div id="event-banner">
@@ -145,33 +153,78 @@
             <div class="sheet-handle"></div>
         </div>
         <div class="sheet-controls">
-            <input type="text" id="search-input" class="search-box" placeholder="🔍 크루원 이름 또는 배번 검색..." oninput="renderRunnerList()">
-            <span class="runner-count" id="runner-count-label">총 22명 출전 대기</span>
+            <input type="text" id="search-input" class="search-box" placeholder="🔍 크루원 이름 또는 배번 검색..." oninput="filterAndRenderUI()">
+            <span class="runner-count" id="runner-count-label">총 22명 출전</span>
         </div>
         <div id="runner-list"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        setTimeout(() => { document.getElementById('splash').classList.add('hidden'); }, 1500);
+        setTimeout(() => { 
+            document.getElementById('splash').classList.add('hidden');
+            if (map) map.invalidateSize();
+        }, 1500);
 
-        const RAW_CHUNCHEON_PTS = [
-            [37.872685, 127.709812], [37.869020, 127.706110], [37.865490, 127.692340], [37.845460, 127.682620],
-            [37.837460, 127.674380], [37.855500, 127.673410], [37.880550, 127.680910], [37.901290, 127.696020],
-            [37.921990, 127.711240], [37.935100, 127.721500], [37.942000, 127.695000], [37.928000, 127.672000],
-            [37.895000, 127.668000], [37.862000, 127.675000], [37.845000, 127.692000], [37.865000, 127.705000],
-            [37.872685, 127.709812]
-        ];
-
-        const RUNNERS = [
-            { name: "서형관", bib: "6327" }, { name: "한태호", bib: "12635" }, { name: "손태민", bib: "13661" },
-            { name: "이재형", bib: "1234" },  { name: "김민성", bib: "6086" },  { name: "이강훈", bib: "7664" },
-            { name: "김민호", bib: "3093" },  { name: "박해정", bib: "11025" }, { name: "강성원", bib: "3009" },
-            { name: "김영환", bib: "6857" },  { name: "양승열", bib: "6388" },  { name: "전희경", bib: "11424" },
-            { name: "최현식", bib: "13318" }, { name: "이성희", bib: "17111" }, { name: "김영식", bib: "4332" },
-            { name: "김희정", bib: "5006" },  { name: "이지훈", bib: "7381" },  { name: "최이현", bib: "8036" },
-            { name: "하늘이", bib: "14428" }, { name: "정슬아", bib: "14400" }, { name: "김병채", bib: "15089" },
-            { name: "이광은", bib: "16089" }
+        const GPX_TRACK_POINTS = [
+            [37.8726913, 127.709762], [37.872403, 127.7089595], [37.8720594, 127.7085689], [37.8706268, 127.7081909],
+            [37.8694778, 127.7073276], [37.8691181, 127.7068872], [37.8690043, 127.706229], [37.8690891, 127.7055391],
+            [37.8696335, 127.7042816], [37.8709986, 127.7029296], [37.8713167, 127.7024189], [37.8721808, 127.69934],
+            [37.8721718, 127.6986423], [37.8716536, 127.6956381], [37.8711748, 127.6938834], [37.8706762, 127.6931219],
+            [37.8701426, 127.6927234], [37.8695363, 127.6925739], [37.8655895, 127.6924641], [37.8634139, 127.6920123],
+            [37.8623023, 127.6923185], [37.8615179, 127.6929011], [37.8611242, 127.6929811], [37.8600101, 127.6929164],
+            [37.8592616, 127.6930367], [37.8589524, 127.6935812], [37.858388, 127.6967757], [37.8572962, 127.6989126],
+            [37.8572502, 127.6987558], [37.8583713, 127.6966518], [37.8589499, 127.6932659], [37.8589355, 127.6927473],
+            [37.8581653, 127.6919683], [37.8568825, 127.6898172], [37.8561345, 127.688999], [37.8555711, 127.6886243],
+            [37.855108, 127.6884207], [37.8544895, 127.6883284], [37.8532956, 127.6885176], [37.8525776, 127.6889916],
+            [37.8519428, 127.6900132], [37.8514198, 127.6905346], [37.8502262, 127.6909723], [37.848553, 127.6908742],
+            [37.8480719, 127.6909833], [37.8461103, 127.6927387], [37.8458578, 127.6928068], [37.8457352, 127.6926173],
+            [37.8454574, 127.6902162], [37.8450185, 127.6884077], [37.8448916, 127.6866781], [37.8449746, 127.6860626],
+            [37.8454809, 127.6845205], [37.8454364, 127.6828441], [37.8456569, 127.6811568], [37.8455282, 127.6802391],
+            [37.8449517, 127.6792569], [37.84376, 127.6785163], [37.8431571, 127.6778141], [37.8425768, 127.6776134],
+            [37.8420006, 127.6772535], [37.8413329, 127.6770823], [37.8392778, 127.6769413], [37.8377049, 127.67729],
+            [37.8375486, 127.6768305], [37.8374123, 127.6743224], [37.8375093, 127.6741383], [37.8392814, 127.6739434],
+            [37.8402401, 127.6741766], [37.8426379, 127.6744724], [37.8435933, 127.6742888], [37.8454463, 127.6732309],
+            [37.8469853, 127.6716374], [37.848021, 127.6714323], [37.8493197, 127.6703932], [37.850453, 127.6701513],
+            [37.850754, 127.6704338], [37.8509527, 127.6710913], [37.8507604, 127.6713159], [37.8497906, 127.6717912],
+            [37.8494326, 127.6721939], [37.8490372, 127.6731991], [37.8490382, 127.6735025], [37.8491754, 127.6736038],
+            [37.8515697, 127.6736757], [37.8529915, 127.673475], [37.85487, 127.6735635], [37.858373, 127.673311],
+            [37.8614803, 127.673505], [37.862416, 127.6737473], [37.8653807, 127.6748357], [37.8667014, 127.6749017],
+            [37.8683778, 127.6756988], [37.8695674, 127.6764065], [37.8723791, 127.6773955], [37.8738501, 127.6775739],
+            [37.8748227, 127.6773302], [37.8766405, 127.6775789], [37.8771979, 127.6777959], [37.8775584, 127.6781144],
+            [37.8782839, 127.6792729], [37.8790178, 127.6798478], [37.8807014, 127.6810133], [37.8814075, 127.6812764],
+            [37.8820146, 127.6816942], [37.8830851, 127.6820913], [37.8840334, 127.6827017], [37.8844952, 127.6830832],
+            [37.885082, 127.6839219], [37.8856361, 127.6844923], [37.8878063, 127.6854871], [37.8881073, 127.6858371],
+            [37.888726, 127.6872587], [37.8909249, 127.689877], [37.8912302, 127.6899676], [37.8921068, 127.6899537],
+            [37.8940298, 127.6897903], [37.8950952, 127.6901538], [37.8959488, 127.69062], [37.8962711, 127.6910009],
+            [37.8968821, 127.6927402], [37.8971147, 127.6931262], [37.9010184, 127.6957503], [37.9023126, 127.6974358],
+            [37.9040403, 127.6990309], [37.90718, 127.7027729], [37.9075867, 127.7029815], [37.9096919, 127.703219],
+            [37.9115553, 127.7040078], [37.9127709, 127.7041424], [37.9137166, 127.70476], [37.9144878, 127.7055945],
+            [37.9155394, 127.7073791], [37.9155658, 127.7085083], [37.9160062, 127.7114642], [37.9162283, 127.7119829],
+            [37.9165209, 127.7120392], [37.9177575, 127.7116976], [37.9192872, 127.7117421], [37.9215892, 127.7106003],
+            [37.9218337, 127.7105962], [37.9219334, 127.7108158], [37.9219832, 127.7118112],
+            [37.9261551, 127.7080812], [37.9269531, 127.7075265], [37.9292938, 127.7055028], [37.9300472, 127.703931],
+            [37.9308265, 127.7029727], [37.9320473, 127.702555], [37.9335394, 127.7024375], [37.9369647, 127.7030464],
+            [37.9396814, 127.7040744], [37.9406275, 127.7043828], [37.940995, 127.7043951], [37.9426031, 127.7033692],
+            [37.9443091, 127.701726], [37.9453409, 127.7008843], [37.9472503, 127.6987201], [37.9476998, 127.6980368],
+            [37.9496798, 127.6960567], [37.9512589, 127.6935621], [37.9537017, 127.6891183], [37.9545246, 127.6873204],
+            [37.9554917, 127.6845434], [37.9563578, 127.6825881], [37.9614036, 127.6723106], [37.9624516, 127.6704514],
+            [37.9638287, 127.6687801], [37.9646508, 127.6680396], [37.9655882, 127.6673981], [37.9677336, 127.6664595],
+            [37.9684882, 127.6663135], [37.9692519, 127.6663143], [37.9682234, 127.670688], [37.96824, 127.6720318],
+            [37.9680827, 127.6727455], [37.9677169, 127.6731347], [37.9665007, 127.6737698], [37.9660053, 127.6751653], [37.9656935, 127.6754545],
+            [37.9649066, 127.6758324], [37.9645776, 127.6762189], [37.9641363, 127.6776574], [37.962745, 127.6786686],
+            [37.9621364, 127.6792433], [37.9610033, 127.6806459], [37.9598896, 127.6824874], [37.95963, 127.6832726],
+            [37.9590444, 127.6860559], [37.9581895, 127.6888156], [37.9579033, 127.6901123], [37.9570511, 127.6919878],
+            [37.9567126, 127.6930571], [37.9556851, 127.6949815], [37.9546039, 127.6958075], [37.9521546, 127.6983833],
+            [37.9518411, 127.698842], [37.9501823, 127.7004263], [37.947511, 127.7039853], [37.9463091, 127.7063711],
+            [37.9444009, 127.7084828], [37.9428262, 127.7104571], [37.9372017, 127.7159181], [37.936625, 127.7168029],
+            [37.934711, 127.7208954], [37.9343016, 127.7214335], [37.9335881, 127.7219913], [37.9330057, 127.722195],
+            [37.9322869, 127.722241], [37.9279928, 127.7216485], [37.9244306, 127.7209888], [37.9168607, 127.7212216],
+            [37.9157334, 127.7213585], [37.910687, 127.7224312], [37.9089003, 127.7230784], [37.9055647, 127.7247954],
+            [37.9015558, 127.7285128], [37.9011773, 127.7287031], [37.9008323, 127.7287037], [37.893893, 127.7269003],
+            [37.8928307, 127.7224987], [37.8923469, 127.7211678], [37.8898382, 127.7185256], [37.888927, 127.7178633],
+            [37.8816622, 127.7136992], [37.877759, 127.7115967], [37.8771615, 127.7114338], [37.8766538, 127.7114876],
+            [37.8760662, 127.7116958], [37.8751053, 127.7122883]
         ];
 
         const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#ec4899", "#8b5cf6", "#06b6d4", "#f97316", "#14b8a6", "#eab308", "#6366f1"];
@@ -179,12 +232,14 @@
         let coursePoints = [];
         let courseLine = null;
         let kmMarkers = [];
+        let runnerMarkers = {};
         let trackingBib = null;
+        let globalRunnersData = [];
 
         const map = L.map('map', { zoomControl: false }).setView([37.88, 127.69], 12);
         L.control.zoom({ position: 'topright' }).addTo(map);
-        // API 키가 필요 없는 표준 오픈스트리트맵 타일 적용 (워터마크 없음)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
@@ -205,7 +260,7 @@
         function updateTrackingButtonUI() {
             const btn = document.getElementById('tracking-mode-btn');
             if (trackingBib) {
-                const runner = RUNNERS.find(r => r.bib === trackingBib);
+                const runner = globalRunnersData.find(r => r.bib === trackingBib);
                 btn.className = "tool-btn tracking-on";
                 btn.innerText = `🔒 ${runner ? runner.name : '트래킹'} 고정중`;
             } else {
@@ -225,31 +280,38 @@
         function buildCourse() {
             coursePoints = [];
             let rawDist = 0;
-            const temp = [];
-            for (let i = 0; i < RAW_CHUNCHEON_PTS.length; i++) {
+            for (let i = 0; i < GPX_TRACK_POINTS.length; i++) {
+                const pt = GPX_TRACK_POINTS[i];
                 if (i === 0) {
-                    temp.push({ lat: RAW_CHUNCHEON_PTS[0][0], lon: RAW_CHUNCHEON_PTS[0][1], raw: 0 });
+                    coursePoints.push({ lat: pt[0], lon: pt[1], dist_km: 0 });
                 } else {
-                    const p1 = RAW_CHUNCHEON_PTS[i-1], p2 = RAW_CHUNCHEON_PTS[i];
-                    for (let s = 1; s <= 30; s++) {
-                        const lat = p1[0] + (p2[0] - p1[0]) * (s / 30);
-                        const lon = p1[1] + (p2[1] - p1[1]) * (s / 30);
-                        const prev = temp[temp.length - 1];
-                        rawDist += calcDist(prev.lat, prev.lon, lat, lon);
-                        temp.push({ lat, lon, raw: rawDist });
-                    }
+                    const prev = GPX_TRACK_POINTS[i-1];
+                    rawDist += calcDist(prev[0], prev[1], pt[0], pt[1]);
+                    coursePoints.push({ lat: pt[0], lon: pt[1], dist_km: rawDist });
                 }
             }
-            const scale = 42.195 / rawDist;
-            coursePoints = temp.map(p => ({ lat: p.lat, lon: p.lon, dist_km: p.raw * scale }));
+            const totalRaw = coursePoints[coursePoints.length - 1].dist_km;
+            const scale = 42.195 / (totalRaw > 0 ? totalRaw : 1);
+            coursePoints.forEach(p => p.dist_km *= scale);
+
             drawMapCourse();
         }
 
         function getCoordAtKm(km) {
-            if (!coursePoints.length) return { lat: 37.8727, lon: 127.7098 };
+            if (!coursePoints.length) return { lat: 37.8726913, lon: 127.709762 };
             if (km <= 0) return coursePoints[0];
-            for (let p of coursePoints) {
-                if (p.dist_km >= km) return p;
+            if (km >= 42.195) return coursePoints[coursePoints.length - 1];
+
+            for (let i = 0; i < coursePoints.length - 1; i++) {
+                const p1 = coursePoints[i];
+                const p2 = coursePoints[i+1];
+                if (p1.dist_km <= km && p2.dist_km >= km) {
+                    const ratio = (km - p1.dist_km) / (p2.dist_km - p1.dist_km || 1);
+                    return {
+                        lat: p1.lat + (p2.lat - p1.lat) * ratio,
+                        lon: p1.lon + (p2.lon - p1.lon) * ratio
+                    };
+                }
             }
             return coursePoints[coursePoints.length - 1];
         }
@@ -260,7 +322,7 @@
             kmMarkers = [];
 
             const latlngs = coursePoints.map(p => [p.lat, p.lon]);
-            courseLine = L.polyline(latlngs, { color: '#2563eb', weight: 5, opacity: 0.85 }).addTo(map);
+            courseLine = L.polyline(latlngs, { color: '#ec4899', weight: 5.5, opacity: 0.9 }).addTo(map);
             fitCourseBounds();
 
             [0, 5, 10, 15, 20, 21.0975, 25, 30, 35, 40, 42.195].forEach(km => {
@@ -282,31 +344,71 @@
             if (courseLine) map.fitBounds(courseLine.getBounds(), { padding: [30, 30] });
         }
 
-        function renderRunnerList() {
+        // 우리 저장소에 갱신되는 data.json을 실시간 로드
+        async function fetchRunnersData() {
+            try {
+                const res = await fetch('data.json?t=' + new Date().getTime());
+                if (!res.ok) throw new Error("Data load failed");
+                const data = await res.json();
+                
+                globalRunnersData = data.map((r, i) => {
+                    const pt = getCoordAtKm(r.km);
+                    return {
+                        ...r,
+                        color: COLORS[i % COLORS.length],
+                        status: r.km >= 42.195 ? "🎉 완주 완료" : (r.km > 0 ? `주행중 (${r.km.toFixed(1)}k)` : "출발 대기 ⏳"),
+                        lat: pt.lat,
+                        lon: pt.lon
+                    };
+                });
+                filterAndRenderUI();
+            } catch(e) {
+                console.log("데이터 동기화 대기 중...");
+            }
+        }
+
+        function filterAndRenderUI() {
             const query = document.getElementById('search-input').value.trim().toLowerCase();
             const listEl = document.getElementById('runner-list');
             listEl.innerHTML = '';
 
-            const filtered = RUNNERS.filter(r => r.name.toLowerCase().includes(query) || r.bib.includes(query));
-            document.getElementById('runner-count-label').innerText = `총 ${filtered.length}명 출전 대기`;
+            if (!globalRunnersData.length) return;
 
-            filtered.forEach((r, idx) => {
-                const color = COLORS[idx % COLORS.length];
+            const filtered = globalRunnersData.filter(r => r.name.toLowerCase().includes(query) || r.bib.includes(query));
+            document.getElementById('runner-count-label').innerText = `총 ${filtered.length}명 출전`;
+
+            Object.values(runnerMarkers).forEach(m => map.removeLayer(m));
+            runnerMarkers = {};
+
+            filtered.forEach((r) => {
+                const icon = L.divIcon({
+                    className: '',
+                    html: `
+                        <div class="gsrc-pin">
+                            <div class="gsrc-pin-bubble" style="border-color:${r.color};">
+                                <span style="width:6px;height:6px;border-radius:50%;background:${r.color};"></span>
+                                ${r.name} <span style="color:var(--accent);">${r.km > 0 ? r.km.toFixed(1)+'k' : '대기'}</span>
+                            </div>
+                            <div class="gsrc-pin-tail" style="border-top-color:${r.color};"></div>
+                        </div>
+                    `
+                });
+                runnerMarkers[r.bib] = L.marker([r.lat, r.lon], { icon }).addTo(map);
+
                 const isTracking = trackingBib === r.bib;
-                
                 const card = document.createElement('div');
                 card.className = 'runner-card';
-                card.style.borderLeft = `5px solid ${color}`;
+                card.style.borderLeft = `5px solid ${r.color}`;
                 card.innerHTML = `
                     <div class="rc-profile">
-                        <div class="rc-dot" style="background:${color};"></div>
+                        <div class="rc-dot" style="background:${r.color};"></div>
                         <div>
                             <div class="rc-name">${r.name}</div>
                             <div class="rc-bib">#${r.bib}</div>
                         </div>
                     </div>
                     <div class="rc-right">
-                        <span class="rc-status">출발 대기 ⏳</span>
+                        <span class="rc-status">${r.status}</span>
                         <button class="track-btn ${isTracking ? 'active' : ''}" onclick="event.stopPropagation(); setTracking('${r.bib}')">
                             ${isTracking ? '🔒 고정중' : '👤 트래킹'}
                         </button>
@@ -314,21 +416,26 @@
                 `;
                 card.onclick = () => {
                     setTracking(r.bib);
-                    const pt = getCoordAtKm(0);
-                    map.flyTo([pt.lat, pt.lon], 16, { duration: 0.6 });
+                    map.flyTo([r.lat, r.lon], 16, { duration: 0.6 });
                 };
                 listEl.appendChild(card);
             });
+
+            if (trackingBib && runnerMarkers[trackingBib]) {
+                const tr = globalRunnersData.find(x => x.bib === trackingBib);
+                if (tr) map.panTo([tr.lat, tr.lon]);
+            }
         }
 
         function setTracking(bib) {
             trackingBib = bib;
             updateTrackingButtonUI();
-            renderRunnerList();
+            filterAndRenderUI();
         }
 
         buildCourse();
-        renderRunnerList();
+        fetchRunnersData();
+        setInterval(fetchRunnersData, 30000); // 30초마다 갱신된 data.json 동기화
     </script>
 </body>
 </html>
