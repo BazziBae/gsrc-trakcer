@@ -1,0 +1,11 @@
+name: Marathon Auto Scraper
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say Hello
+        run: echo "Action Test Success"
