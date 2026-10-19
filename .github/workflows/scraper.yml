@@ -1,11 +1,34 @@
 name: Marathon Auto Scraper
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '* * * * *' # 매분 자동 실행
+  workflow_dispatch: # 수동 실행 버튼
+
+permissions:
+  contents: write # 봇이 data.json을 수정하고 저장할 수 있는 권한 강제 부여
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - name: Say Hello
-        run: echo "Action Test Success"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run Scraper Script
+        run: python scraper.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update runner data" && git push)
