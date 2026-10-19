@@ -7,167 +7,111 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
-            --bg-dark: #0a0a0c;
-            --bg-card: #141418;
-            --bg-glass: rgba(20, 20, 24, 0.88);
-            --accent: #f59e0b; /* GSRC 골드 옐로우 포인트 */
-            --accent-glow: rgba(245, 158, 11, 0.25);
-            --text-main: #ffffff;
-            --text-sub: #9ca3af;
-            --border: rgba(255, 255, 255, 0.08);
-            --live-red: #ef4444;
-            --up-blue: #3b82f6;
-            --fin-green: #10b981;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-glass: rgba(15, 23, 42, 0.9);
+            --accent: #f59e0b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* 1. 인트로 스플래시 화면 */
         #splash {
-            position: fixed; inset: 0; background: #000000; z-index: 9999;
+            position: fixed; inset: 0; background: #000; z-index: 9999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             transition: opacity 0.6s ease, visibility 0.6s ease;
         }
         #splash.hidden { opacity: 0; visibility: hidden; }
-        .splash-logo { width: 200px; margin-bottom: 14px; animation: pulsePop 1.2s ease-out; }
-        .splash-sub { font-size: 11px; letter-spacing: 3.5px; color: var(--accent); font-weight: 700; opacity: 0.9; }
-        @keyframes pulsePop {
-            0% { transform: scale(0.85); opacity: 0; }
-            60% { transform: scale(1.03); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        .splash-logo { width: 200px; margin-bottom: 10px; }
+        .splash-sub { font-size: 10px; letter-spacing: 3px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+        .splash-credit { font-size: 11px; color: #64748b; font-family: monospace; }
 
-        /* 2. 상단 브랜드 헤더 */
         header {
-            background: var(--bg-dark); padding: 10px 16px; border-bottom: 1px solid var(--border);
+            background: #090d16; padding: 12px 16px; border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center; z-index: 1000;
         }
         .brand-box { display: flex; align-items: center; gap: 10px; }
-        .header-logo { height: 26px; width: auto; }
-        .brand-title { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; color: var(--text-sub); border-left: 1.5px solid #333; padding-left: 10px; }
-        .status-pill { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
-        .status-pill.UPCOMING { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-        .status-pill.LIVE { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); animation: blink 1.5s infinite; }
-        .status-pill.FINISHED { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-        @keyframes blink { 50% { opacity: 0.6; } }
+        .header-logo { height: 24px; width: auto; }
+        .brand-title { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--text-sub); border-left: 1.5px solid #334155; padding-left: 8px; line-height: 1.2; }
+        .creator-tag { font-size: 9px; color: var(--accent); font-family: monospace; font-weight: 600; }
+        
+        .status-pill { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
 
-        /* 3. 대회 선택 가로 스크롤 탭 */
-        #event-tabs {
-            background: #0f0f13; display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto;
-            border-bottom: 1px solid var(--border); scrollbar-width: none; z-index: 1000;
+        #event-banner {
+            background: linear-gradient(135deg, #1e293b, #0f172a); padding: 10px 16px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
         }
-        #event-tabs::-webkit-scrollbar { display: none; }
-        .event-tab {
-            flex-shrink: 0; padding: 8px 14px; border-radius: 10px; background: var(--bg-card);
-            border: 1px solid var(--border); color: var(--text-sub); cursor: pointer; transition: 0.2s;
-            display: flex; flex-direction: column; gap: 2px;
-        }
-        .event-tab.active { background: rgba(245, 158, 11, 0.12); border-color: var(--accent); color: var(--text-main); box-shadow: 0 0 12px var(--accent-glow); }
-        .tab-title { font-size: 13px; font-weight: 800; }
-        .tab-date { font-size: 10px; color: var(--text-sub); font-family: monospace; }
-        .event-tab.active .tab-date { color: var(--accent); }
+        .ev-title { font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px; }
+        .ev-date { font-size: 11px; font-family: monospace; color: var(--accent); background: rgba(245, 158, 11, 0.1); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.2); }
 
-        /* 4. 상태 안내 & 시뮬레이션 컨트롤 바 */
-        #status-bar {
-            background: #18181f; padding: 8px 16px; border-bottom: 1px solid var(--border);
-            display: flex; flex-direction: column; gap: 8px; z-index: 1000; font-size: 12px;
-        }
-        .status-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
-        .sim-btn {
-            background: var(--accent); color: #000; border: none; padding: 5px 10px; border-radius: 6px;
-            font-size: 11px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
-        }
-        .sim-btn.secondary { background: #272730; color: #e5e7eb; border: 1px solid #3f3f46; }
-        #sim-slider-box { display: none; align-items: center; gap: 8px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.1); }
-        #sim-slider-box.show { display: flex; }
-        input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-
-        /* 5. 지도 영역 */
         #map-container { position: relative; flex: 1; width: 100%; }
-        #map { width: 100%; height: 100%; z-index: 1; background: #111; }
-        /* 다크 모드 지도 필터 */
-        .leaflet-tile-pane { filter: brightness(0.88) contrast(1.08) saturate(0.85); }
-        .map-floating-tools {
-            position: absolute; top: 10px; left: 10px; z-index: 500; display: flex; gap: 6px;
-        }
-        .tool-chip {
-            background: var(--bg-glass); backdrop-filter: blur(8px); color: #fff; padding: 6px 10px;
+        #map { width: 100%; height: 100%; z-index: 1; background: #1a1a1a; }
+        
+        .map-tools { position: absolute; top: 12px; left: 12px; z-index: 500; display: flex; gap: 6px; }
+        .tool-btn {
+            background: var(--bg-glass); backdrop-filter: blur(10px); color: #fff; padding: 7px 12px;
             border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid var(--border);
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 4px;
         }
+        .tool-btn.tracking-on { background: #3b82f6; border-color: #60a5fa; }
 
-        /* 6. 하단 크루원 대시보드 (바텀 시트) */
         #bottom-sheet {
-            height: 44%; background: var(--bg-dark); border-top: 1px solid rgba(255,255,255,0.12);
-            border-top-left-radius: 20px; border-top-right-radius: 20px;
-            box-shadow: 0 -8px 25px rgba(0,0,0,0.6); display: flex; flex-direction: column; z-index: 1000;
-            transition: height 0.3s ease;
+            height: 48%; background: var(--bg-dark); border-top: 1px solid rgba(255,255,255,0.12);
+            border-top-left-radius: 22px; border-top-right-radius: 22px;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.7); display: flex; flex-direction: column; z-index: 1000;
         }
-        #bottom-sheet.expanded { height: 72%; }
         .sheet-handle-bar { padding: 8px 0 4px; display: flex; justify-content: center; cursor: pointer; }
-        .sheet-handle { width: 38px; height: 4px; background: #3f3f46; border-radius: 4px; }
-        .sheet- controls {
-            padding: 6px 16px 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
-            border-bottom: 1px solid var(--border);
-        }
+        .sheet-handle { width: 38px; height: 4px; background: #475569; border-radius: 4px; }
+        .sheet-controls { padding: 6px 16px 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
         .search-box {
-            flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
-            padding: 6px 10px; color: #fff; font-size: 12px; outline: none;
+            flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+            padding: 8px 12px; color: #fff; font-size: 13px; outline: none;
         }
         .search-box:focus { border-color: var(--accent); }
         .runner-count { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
 
         #runner-list { flex: 1; overflow-y: auto; padding: 10px 16px 24px; display: flex; flex-direction: column; gap: 8px; }
         .runner-card {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
-            padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: 0.15s;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.15s;
         }
-        .runner-card:active { transform: scale(0.985); background: #1c1c22; }
-        .rc-top { display: flex; justify-content: space-between; align-items: center; }
-        .rc-profile { display: flex; align-items: center; gap: 8px; }
+        .runner-card:active { transform: scale(0.985); background: #334155; }
+        .rc-profile { display: flex; align-items: center; gap: 10px; }
         .rc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
         .rc-name { font-size: 15px; font-weight: 800; color: #fff; }
         .rc-bib { font-size: 11px; font-weight: 600; color: var(--text-sub); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-        .rc-dist { font-size: 16px; font-weight: 900; color: var(--accent); font-family: monospace; }
-        .rc-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-sub); }
         
-        /* 진행률 프로그레스 바 */
-        .progress-track { width: 100%; height: 5px; background: #27272a; border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #10b981); border-radius: 3px; transition: width 0.3s; }
-
-        /* 지도 위 마커 디자인 */
-        .gsrc-pin { display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); }
-        .gsrc-pin-bubble {
-            background: #111827; color: #fff; padding: 3px 8px; border-radius: 14px; font-weight: 800;
-            font-size: 11px; border: 2px solid var(--accent); box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-            white-space: nowrap; display: flex; align-items: center; gap: 4px;
+        .rc-right { display: flex; align-items: center; gap: 12px; }
+        .rc-status { font-size: 12px; color: #60a5fa; font-weight: 600; text-align: right; }
+        .track-btn {
+            background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa;
+            padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;
         }
-        .gsrc-pin-tail { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--accent); margin-top: -1px; }
-        .km-marker { background: #000; color: var(--accent); font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; border: 1.5px solid var(--accent); box-shadow: 0 2px 4px rgba(0,0,0,0.5); white-space: nowrap; }
+        .track-btn.active { background: #3b82f6; color: #fff; }
+
+        .km-marker { background: #1e293b; color: #e2e8f0; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 12px; border: 1.5px solid #475569; box-shadow: 0 2px 6px rgba(0,0,0,0.4); white-space: nowrap; }
+        .km-marker.start { background: #10b981; color: #fff; border-color: #059669; }
+        .km-marker.finish { background: #f59e0b; color: #000; border-color: #d97706; font-weight: 900; }
     </style>
 </head>
 <body>
 
-    <!-- 1. GSRC 인트로 스플래시 (업로드하신 로고 SVG 완벽 재현) -->
     <div id="splash">
         <svg class="splash-logo" viewBox="0 0 340 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- G -->
             <path d="M72 28C66 19 56 14 44 14C25 14 10 28 10 46C10 64 25 78 44 78C61 78 74 66 75 50H48" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="43" cy="46" r="8" fill="#F59E0B"/>
-            <!-- S -->
             <path d="M148 20H116C105 20 98 26 98 34C98 42 105 46 116 46H136C147 46 154 52 154 61C154 71 146 77 134 77H100" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- 골드 포인트 점 -->
             <circle cx="169" cy="19" r="8" fill="#F59E0B"/>
-            <!-- R -->
             <path d="M192 77V18H226C238 18 246 25 246 35C246 45 238 51 226 51H192M222 51L246 77" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- C -->
             <path d="M322 25C316 18 306 14 295 14C276 14 262 28 262 46C262 64 276 78 295 78C306 78 316 74 322 67" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div class="splash-sub">MARATHON TRACKER FOR GSRC</div>
+        <div class="splash-credit">made by Baebazzi</div>
     </div>
 
-    <!-- 2. 상단 고정 헤더 -->
     <header>
         <div class="brand-box">
             <svg class="header-logo" viewBox="0 0 340 90" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -178,215 +122,98 @@
                 <path d="M192 77V18H226C238 18 246 25 246 35C246 45 238 51 226 51H192M222 51L246 77" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M322 25C316 18 306 14 295 14C276 14 262 28 262 46C262 64 276 78 295 78C306 78 316 74 322 67" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <div class="brand-title">MARATHON TRACKER<br><span style="color:var(--accent);">FOR GSRC</span></div>
+            <div class="brand-title">MARATHON TRACKER<br><span class="creator-tag">made by Baebazzi</span></div>
         </div>
-        <div id="event-status-badge" class="status-pill UPCOMING">⏳ UPCOMING</div>
+        <div class="status-pill">⏳ 대회 대기 중</div>
     </header>
 
-    <!-- 3. 대회 선택 탭 (클릭 시 대회 전환) -->
-    <div id="event-tabs"></div>
-
-    <!-- 4. 스마트 상태 알림 & 시뮬레이션 바 -->
-    <div id="status-bar">
-        <div class="status-row">
-            <span id="status-msg" style="color:#d1d5db;">📌 대회 시작 전입니다. 기록 사이트 조회를 대기합니다.</span>
-            <div style="display:flex; gap:6px;">
-                <button class="sim-btn" id="sim-toggle-btn" onclick="toggleSimulationMode()">⚡ 가상 주행 테스트 켜기</button>
-            </div>
-        </div>
-        <div id="sim-slider-box">
-            <span id="sim-clock" style="font-family:monospace; color:var(--accent); font-weight:800; min-width:62px;">09:30:00</span>
-            <input type="range" id="time-slider" min="32400" max="50400" step="60" value="36000" oninput="onSimTimeChange(this.value)">
-            <button class="sim-btn secondary" id="auto-play-btn" onclick="toggleAutoPlay()">▶ 재생</button>
-        </div>
+    <div id="event-banner">
+        <div class="ev-title">🍁 2026 춘천마라톤 풀코스</div>
+        <div class="ev-date">2026.10.25 (일)</div>
     </div>
 
-    <!-- 5. 지도 영역 -->
     <div id="map-container">
-        <div class="map-floating-tools">
-            <label class="tool-chip">
-                📂 GPX 정밀 파일교체
-                <input type="file" accept=".gpx" style="display:none;" onchange="handleGpxFile(event)">
-            </label>
-            <div class="tool-chip" onclick="fitCourseBounds()">🎯 코스 전체보기</div>
+        <div class="map-tools">
+            <div class="tool-btn" onclick="fitCourseBounds()">🎯 코스 전체보기</div>
+            <div class="tool-btn" id="tracking-mode-btn" onclick="toggleFreeRoam()">📍 자유 보기</div>
         </div>
         <div id="map"></div>
     </div>
 
-    <!-- 6. 하단 크루원 리스트 바텀 시트 -->
     <div id="bottom-sheet">
-        <div class="sheet-handle-bar" onclick="toggleSheetExpand()">
+        <div class="sheet-handle-bar">
             <div class="sheet-handle"></div>
         </div>
         <div class="sheet-controls">
             <input type="text" id="search-input" class="search-box" placeholder="🔍 크루원 이름 또는 배번 검색..." oninput="renderRunnerList()">
-            <span class="runner-count" id="runner-count-label">총 22명</span>
+            <span class="runner-count" id="runner-count-label">총 22명 출전 대기</span>
         </div>
         <div id="runner-list"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 스플래시 화면 1.6초 후 자동 닫기
-        setTimeout(() => {
-            document.getElementById('splash').classList.add('hidden');
-        }, 1600);
+        setTimeout(() => { document.getElementById('splash').classList.add('hidden'); }, 1500);
 
-        // 올려주신 춘천마라톤 GPX 실제 좌표 샘플링 내장 (공지천 출발 -> 의암호 순환 42.195km)
-        const CHUNCHEON_WAYPOINTS = [
-            [37.87278, 127.70985], [37.86902, 127.70611], [37.87221, 127.69902], [37.86549, 127.69234],
-            [37.84546, 127.68262], [37.83746, 127.67438], [37.85550, 127.67341], [37.88055, 127.68091],
-            [37.90129, 127.69602], [37.92199, 127.71124], [37.93510, 127.72150], [37.94200, 127.69500],
-            [37.92800, 127.67200], [37.89500, 127.66800], [37.86200, 127.67500], [37.84500, 127.69200],
-            [37.86500, 127.70500], [37.87278, 127.70985]
+        const RAW_CHUNCHEON_PTS = [
+            [37.872685, 127.709812], [37.869020, 127.706110], [37.865490, 127.692340], [37.845460, 127.682620],
+            [37.837460, 127.674380], [37.855500, 127.673410], [37.880550, 127.680910], [37.901290, 127.696020],
+            [37.921990, 127.711240], [37.935100, 127.721500], [37.942000, 127.695000], [37.928000, 127.672000],
+            [37.895000, 127.668000], [37.862000, 127.675000], [37.845000, 127.692000], [37.865000, 127.705000],
+            [37.872685, 127.709812]
         ];
 
-        // 서울 JTBC 마라톤 좌표 내장 (상암 -> 잠실 42.195km)
-        const JTBC_WAYPOINTS = [
-            [37.56620, 126.89774], [37.54710, 126.91250], [37.52602, 126.92700], [37.53900, 126.94538],
-            [37.56051, 126.96321], [37.57010, 126.97684], [37.57097, 127.00436], [37.57398, 127.03518],
-            [37.56150, 127.06388], [37.53750, 127.07900], [37.52046, 127.09453], [37.51431, 127.07360]
-        ];
-
-        // 2026 춘천마라톤 출전 GSRC 크루원 22명 실제 명단
-        const CHUNCHEON_RUNNERS = [
+        const RUNNERS = [
             { name: "서형관", bib: "6327" }, { name: "한태호", bib: "12635" }, { name: "손태민", bib: "13661" },
-            { name: "이재형", bib: "1234" }, { name: "김민성", bib: "6086" }, { name: "이강훈", bib: "7664" },
-            { name: "김민호", bib: "3093" }, { name: "박해정", bib: "11025" }, { name: "강성원", bib: "3009" },
-            { name: "김영환", bib: "6857" }, { name: "양승열", bib: "6388" }, { name: "전희경", bib: "11424" },
+            { name: "이재형", bib: "1234" },  { name: "김민성", bib: "6086" },  { name: "이강훈", bib: "7664" },
+            { name: "김민호", bib: "3093" },  { name: "박해정", bib: "11025" }, { name: "강성원", bib: "3009" },
+            { name: "김영환", bib: "6857" },  { name: "양승열", bib: "6388" },  { name: "전희경", bib: "11424" },
             { name: "최현식", bib: "13318" }, { name: "이성희", bib: "17111" }, { name: "김영식", bib: "4332" },
-            { name: "김희정", bib: "5006" }, { name: "이지훈", bib: "7381" }, { name: "최이현", bib: "8036" },
+            { name: "김희정", bib: "5006" },  { name: "이지훈", bib: "7381" },  { name: "최이현", bib: "8036" },
             { name: "하늘이", bib: "14428" }, { name: "정슬아", bib: "14400" }, { name: "김병채", bib: "15089" },
             { name: "이광은", bib: "16089" }
         ];
 
-        // 색상 팔레트
         const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#ec4899", "#8b5cf6", "#06b6d4", "#f97316", "#14b8a6", "#eab308", "#6366f1"];
-
-        // 대회별 데이터베이스 정의
-        const EVENTS = [
-            {
-                id: "chuncheon2026",
-                title: "2026 춘천마라톤",
-                date: "2026-10-25",
-                myresultId: "춘마링크대기",
-                waypoints: CHUNCHEON_WAYPOINTS,
-                runners: CHUNCHEON_RUNNERS.map((r, i) => ({
-                    ...r,
-                    color: COLORS[i % COLORS.length],
-                    // 배번 앞자리에 따라 가상 출발시간(그룹) 및 페이스 차등 부여 (시뮬레이션용)
-                    startSec: 32400 + (parseInt(r.bib) > 10000 ? 600 : 0), // 09:00 또는 09:10 출발
-                    paceSec: 270 + (i * 7) % 110 // 4'30" ~ 6'10" 사이 분포
-                }))
-            },
-            {
-                id: "jtbc2026",
-                title: "2026 JTBC 서울마라톤",
-                date: "2026-11-01",
-                myresultId: "177",
-                waypoints: JTBC_WAYPOINTS,
-                runners: [
-                    { name: "최성수", bib: "4133", color: "#ef4444", startSec: 28800, paceSec: 295 },
-                    { name: "김명언", bib: "3463", color: "#3b82f6", startSec: 29100, paceSec: 330 },
-                    { name: "전민재", bib: "1271", color: "#10b981", startSec: 28800, paceSec: 260 }
-                ]
-            },
-            {
-                id: "jtbc2025",
-                title: "2025 JTBC 서울마라톤",
-                date: "2025-11-02",
-                myresultId: "133",
-                waypoints: JTBC_WAYPOINTS,
-                runners: [
-                    { name: "전민재", bib: "1271", color: "#10b981", startSec: 28800, paceSec: 265, finishNet: "03:06:22" },
-                    { name: "최성수", bib: "4133", color: "#ef4444", startSec: 28800, paceSec: 300, finishNet: "03:30:58" },
-                    { name: "김명언", bib: "3463", color: "#3b82f6", startSec: 29100, paceSec: 340, finishNet: "03:59:06" }
-                ]
-            }
-        ];
-
-        let currentEvent = EVENTS[0];
-        let isSimMode = false;
-        let playTimer = null;
+        
         let coursePoints = [];
         let courseLine = null;
-        let kmBadges = [];
-        let runnerMarkers = {};
+        let kmMarkers = [];
+        let trackingBib = null;
 
-        // 지도 초기화
         const map = L.map('map', { zoomControl: false }).setView([37.88, 127.69], 12);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap'
+        L.control.zoom({ position: 'topright' }).addTo(map);
+        // API 키가 필요 없는 표준 오픈스트리트맵 타일 적용 (워터마크 없음)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
         }).addTo(map);
 
-        // 대회 날짜와 오늘 날짜를 비교해 상태(UPCOMING / LIVE / FINISHED) 자동 판별
-        function getEventStatus(dateStr) {
-            const today = new Date().toISOString().slice(0, 10);
-            if (dateStr > today) return "UPCOMING";
-            if (dateStr < today) return "FINISHED";
-            return "LIVE";
-        }
-
-        // 상단 대회 선택 탭 렌더링
-        function renderTabs() {
-            const container = document.getElementById('event-tabs');
-            container.innerHTML = '';
-            EVENTS.forEach(ev => {
-                const st = getEventStatus(ev.date);
-                const dot = st === 'LIVE' ? '🔴' : (st === 'UPCOMING' ? '🗓️' : '🏁');
-                const tab = document.createElement('div');
-                tab.className = `event-tab ${ev.id === currentEvent.id ? 'active' : ''}`;
-                tab.innerHTML = `
-                    <div class="tab-title">${dot} ${ev.title}</div>
-                    <div class="tab-date">${ev.date} · ${ev.runners.length}명</div>
-                `;
-                tab.onclick = () => selectEvent(ev);
-                container.appendChild(tab);
-            });
-        }
-
-        // 대회 변경 시 실행
-        function selectEvent(ev) {
-            currentEvent = ev;
-            isSimMode = false;
-            stopAutoPlay();
-            document.getElementById('sim-slider-box').classList.remove('show');
-            document.getElementById('sim-toggle-btn').innerText = "⚡ 가상 주행 테스트 켜기";
-
-            renderTabs();
-            updateStatusBanner();
-            buildCourseFromWaypoints(ev.waypoints);
-            renderRunnerList();
-        }
-
-        // 상태 배너 업데이트 (시작 전이나 종료 후에는 서버 요청 안 함을 명시)
-        function updateStatusBanner() {
-            const st = getEventStatus(currentEvent.date);
-            const badge = document.getElementById('event-status-badge');
-            const msg = document.getElementById('status-msg');
-
-            if (isSimMode) {
-                badge.className = 'status-pill LIVE';
-                badge.innerText = '⚡ SIM LIVE';
-                msg.innerText = '슬라이더를 움직여 시간대별 크루원 예상 위치를 확인하세요.';
-                return;
+        map.on('dragstart', () => {
+            if (trackingBib) {
+                trackingBib = null;
+                updateTrackingButtonUI();
             }
+        });
 
-            badge.className = `status-pill ${st}`;
-            if (st === 'UPCOMING') {
-                const dDay = Math.ceil((new Date(currentEvent.date) - new Date()) / (1000 * 60 * 60 * 24));
-                badge.innerText = `D-${dDay > 0 ? dDay : 'DAY'}`;
-                msg.innerText = `대회 시작 전입니다 (자동 크롤링 대기 중 · 코스/명단 프리뷰 모드)`;
-            } else if (st === 'FINISHED') {
-                badge.innerText = '🏁 FINISHED';
-                msg.innerText = `종료된 대회입니다. 데이터 갱신 없이 공식 완주 기록을 보존합니다.`;
+        function toggleFreeRoam() {
+            trackingBib = null;
+            updateTrackingButtonUI();
+            fitCourseBounds();
+        }
+
+        function updateTrackingButtonUI() {
+            const btn = document.getElementById('tracking-mode-btn');
+            if (trackingBib) {
+                const runner = RUNNERS.find(r => r.bib === trackingBib);
+                btn.className = "tool-btn tracking-on";
+                btn.innerText = `🔒 ${runner ? runner.name : '트래킹'} 고정중`;
             } else {
-                badge.innerText = '🔴 LIVE';
-                msg.innerText = `실시간 트래킹 가동 중! (1분 주기로 기록 사이트 자동 동기화)`;
+                btn.className = "tool-btn";
+                btn.innerText = "📍 자유 보기";
             }
         }
 
-        // 거리 계산 (km)
         function calcDist(lat1, lon1, lat2, lon2) {
             const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -395,19 +222,18 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // 내장 Waypoint를 42.195km 풀코스로 보간하여 지도 표시
-        function buildCourseFromWaypoints(waypoints) {
+        function buildCourse() {
             coursePoints = [];
             let rawDist = 0;
             const temp = [];
-            for (let i = 0; i < waypoints.length; i++) {
+            for (let i = 0; i < RAW_CHUNCHEON_PTS.length; i++) {
                 if (i === 0) {
-                    temp.push({ lat: waypoints[0][0], lon: waypoints[0][1], raw: 0 });
+                    temp.push({ lat: RAW_CHUNCHEON_PTS[0][0], lon: RAW_CHUNCHEON_PTS[0][1], raw: 0 });
                 } else {
-                    const p1 = waypoints[i-1], p2 = waypoints[i];
-                    for (let s = 1; s <= 40; s++) {
-                        const lat = p1[0] + (p2[0] - p1[0]) * (s / 40);
-                        const lon = p1[1] + (p2[1] - p1[1]) * (s / 40);
+                    const p1 = RAW_CHUNCHEON_PTS[i-1], p2 = RAW_CHUNCHEON_PTS[i];
+                    for (let s = 1; s <= 30; s++) {
+                        const lat = p1[0] + (p2[0] - p1[0]) * (s / 30);
+                        const lon = p1[1] + (p2[1] - p1[1]) * (s / 30);
                         const prev = temp[temp.length - 1];
                         rawDist += calcDist(prev.lat, prev.lon, lat, lon);
                         temp.push({ lat, lon, raw: rawDist });
@@ -417,30 +243,6 @@
             const scale = 42.195 / rawDist;
             coursePoints = temp.map(p => ({ lat: p.lat, lon: p.lon, dist_km: p.raw * scale }));
             drawMapCourse();
-        }
-
-        // 정밀 GPX 파일 직접 업로드 시 처리
-        function handleGpxFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                const xml = new DOMParser().parseFromString(evt.target.result, "text/xml");
-                const pts = xml.getElementsByTagName("trkpt");
-                if (!pts.length) return alert("GPX 트랙 데이터가 없습니다.");
-                coursePoints = [];
-                let total = 0, pLat = null, pLon = null;
-                for (let i = 0; i < pts.length; i++) {
-                    const lat = parseFloat(pts[i].getAttribute("lat"));
-                    const lon = parseFloat(pts[i].getAttribute("lon"));
-                    if (pLat !== null) total += calcDist(pLat, pLon, lat, lon);
-                    coursePoints.push({ lat, lon, dist_km: total });
-                    pLat = lat; pLon = lon;
-                }
-                drawMapCourse();
-                renderRunnerList();
-            };
-            reader.readAsText(file);
         }
 
         function getCoordAtKm(km) {
@@ -454,197 +256,79 @@
 
         function drawMapCourse() {
             if (courseLine) map.removeLayer(courseLine);
-            kmBadges.forEach(m => map.removeLayer(m));
-            kmBadges = [];
-            Object.values(runnerMarkers).forEach(m => map.removeLayer(m));
-            runnerMarkers = {};
+            kmMarkers.forEach(m => map.removeLayer(m));
+            kmMarkers = [];
 
             const latlngs = coursePoints.map(p => [p.lat, p.lon]);
-            courseLine = L.polyline(latlngs, { color: '#f59e0b', weight: 4, opacity: 0.85 }).addTo(map);
+            courseLine = L.polyline(latlngs, { color: '#2563eb', weight: 5, opacity: 0.85 }).addTo(map);
             fitCourseBounds();
 
-            [0, 10, 21.0975, 30, 42.195].forEach(km => {
+            [0, 5, 10, 15, 20, 21.0975, 25, 30, 35, 40, 42.195].forEach(km => {
                 const pt = getCoordAtKm(km);
-                const text = km === 0 ? 'START' : (km === 21.0975 ? 'HALF' : (km === 42.195 ? 'FINISH' : `${km}K`));
+                let className = 'km-marker';
+                let text = `${km}K`;
+                if (km === 0) { className += ' start'; text = '🏁 START'; }
+                else if (km === 42.195) { className += ' finish'; text = '🏆 FINISH'; }
+                else if (km === 21.0975) { text = '⚡ HALF'; }
+
                 const m = L.marker([pt.lat, pt.lon], {
-                    icon: L.divIcon({ className: '', html: `<div class="km-marker">${text}</div>`, iconSize: [44, 18], iconAnchor: [22, 9] })
+                    icon: L.divIcon({ className: '', html: `<div class="${className}">${text}</div>`, iconSize: [52, 22], iconAnchor: [26, 11] })
                 }).addTo(map);
-                kmBadges.push(m);
+                kmMarkers.push(m);
             });
         }
 
         function fitCourseBounds() {
-            if (courseLine) map.fitBounds(courseLine.getBounds(), { padding: [25, 25] });
+            if (courseLine) map.fitBounds(courseLine.getBounds(), { padding: [30, 30] });
         }
 
-        function secToTime(sec) {
-            const h = String(Math.floor(sec / 3600)).padStart(2, '0');
-            const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
-            const s = String(Math.floor(sec % 60)).padStart(2, '0');
-            return `${h}:${m}:${s}`;
-        }
-
-        function secToPace(sec) {
-            return `${Math.floor(sec / 60)}'${String(Math.floor(sec % 60)).padStart(2, '0')}"`;
-        }
-
-        // 주자별 현재 상태 및 위치 계산 (그룹별 출발시간차 반영)
-        function calcRunnerState(r, curSec) {
-            const st = getEventStatus(currentEvent.date);
-            const maxKm = coursePoints.length ? coursePoints[coursePoints.length - 1].dist_km : 42.195;
-
-            // 1. 대회 시작 전이고 시뮬레이션 모드가 아닐 때 -> 대기 상태
-            if (st === 'UPCOMING' && !isSimMode) {
-                const pt = getCoordAtKm(0);
-                return { km: 0, pct: 0, status: `출발 대기 (${secToTime(r.startSec).slice(0,5)} 출발)`, pace: "-", lat: pt.lat, lon: pt.lon };
-            }
-
-            // 2. 이미 종료된 대회이고 시뮬레이션이 아닐 때 -> 완주 기록 고정
-            if (st === 'FINISHED' && !isSimMode) {
-                const pt = getCoordAtKm(maxKm);
-                const netStr = r.finishNet || secToTime(maxKm * r.paceSec);
-                return { km: maxKm, pct: 100, status: `완주 성공 (${netStr})`, pace: secToPace(r.paceSec), lat: pt.lat, lon: pt.lon };
-            }
-
-            // 3. 실시간 주행 또는 가상 시뮬레이션 모드
-            if (curSec < r.startSec) {
-                const pt = getCoordAtKm(0);
-                return { km: 0, pct: 0, status: `${secToTime(r.startSec).slice(0,5)} 출발 대기`, pace: secToPace(r.paceSec), lat: pt.lat, lon: pt.lon };
-            }
-
-            const elapsed = curSec - r.startSec;
-            const estKm = elapsed / r.paceSec;
-
-            if (estKm >= maxKm) {
-                const pt = getCoordAtKm(maxKm);
-                const netStr = secToTime(maxKm * r.paceSec);
-                return { km: maxKm, pct: 100, status: `🎉 완주 (${netStr})`, pace: secToPace(r.paceSec), lat: pt.lat, lon: pt.lon };
-            }
-
-            const pt = getCoordAtKm(estKm);
-            const lastMat = Math.floor(estKm / 5) * 5;
-            return {
-                km: estKm,
-                pct: Math.min((estKm / maxKm) * 100, 100),
-                status: lastMat > 0 ? `${lastMat}km 통과 · 주행 중 🔥` : `출발 완료 · 주행 중 🔥`,
-                pace: secToPace(r.paceSec),
-                lat: pt.lat,
-                lon: pt.lon
-            };
-        }
-
-        // 크루원 리스트 및 지도 마커 렌더링
         function renderRunnerList() {
-            const curSec = parseInt(document.getElementById('time-slider').value);
             const query = document.getElementById('search-input').value.trim().toLowerCase();
             const listEl = document.getElementById('runner-list');
             listEl.innerHTML = '';
 
-            // 상태 계산 후 거리순 정렬
-            const computed = currentEvent.runners.map(r => ({
-                ...r,
-                state: calcRunnerState(r, curSec)
-            })).sort((a, b) => b.state.km - a.state.km);
+            const filtered = RUNNERS.filter(r => r.name.toLowerCase().includes(query) || r.bib.includes(query));
+            document.getElementById('runner-count-label').innerText = `총 ${filtered.length}명 출전 대기`;
 
-            const filtered = computed.filter(r => r.name.toLowerCase().includes(query) || r.bib.includes(query));
-            document.getElementById('runner-count-label').innerText = `총 ${filtered.length}명`;
-
-            // 기존 마커 정리
-            Object.values(runnerMarkers).forEach(m => map.removeLayer(m));
-            runnerMarkers = {};
-
-            filtered.forEach(r => {
-                const s = r.state;
-                // 지도 마커 찍기
-                const icon = L.divIcon({
-                    className: '',
-                    html: `
-                        <div class="gsrc-pin">
-                            <div class="gsrc-pin-bubble" style="border-color:${r.color};">
-                                <span style="width:7px;height:7px;border-radius:50%;background:${r.color};"></span>
-                                ${r.name} <span style="color:var(--accent);">${s.km.toFixed(1)}k</span>
-                            </div>
-                            <div class="gsrc-pin-tail" style="border-top-color:${r.color};"></div>
-                        </div>
-                    `
-                });
-                runnerMarkers[r.bib] = L.marker([s.lat, s.lon], { icon }).addTo(map);
-
-                // 카드 생성
+            filtered.forEach((r, idx) => {
+                const color = COLORS[idx % COLORS.length];
+                const isTracking = trackingBib === r.bib;
+                
                 const card = document.createElement('div');
                 card.className = 'runner-card';
+                card.style.borderLeft = `5px solid ${color}`;
                 card.innerHTML = `
-                    <div class="rc-top">
-                        <div class="rc-profile">
-                            <div class="rc-dot" style="background:${r.color};"></div>
-                            <span class="rc-name">${r.name}</span>
-                            <span class="rc-bib">#${r.bib}</span>
+                    <div class="rc-profile">
+                        <div class="rc-dot" style="background:${color};"></div>
+                        <div>
+                            <div class="rc-name">${r.name}</div>
+                            <div class="rc-bib">#${r.bib}</div>
                         </div>
-                        <div class="rc-dist">${s.km.toFixed(2)} km</div>
                     </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width:${s.pct}%;"></div>
-                    </div>
-                    <div class="rc-bottom">
-                        <span>예상 페이스 ${s.pace}</span>
-                        <span style="color:#e5e7eb; font-weight:600;">${s.status}</span>
+                    <div class="rc-right">
+                        <span class="rc-status">출발 대기 ⏳</span>
+                        <button class="track-btn ${isTracking ? 'active' : ''}" onclick="event.stopPropagation(); setTracking('${r.bib}')">
+                            ${isTracking ? '🔒 고정중' : '👤 트래킹'}
+                        </button>
                     </div>
                 `;
-                card.onclick = () => map.flyTo([s.lat, s.lon], 15, { duration: 0.6 });
+                card.onclick = () => {
+                    setTracking(r.bib);
+                    const pt = getCoordAtKm(0);
+                    map.flyTo([pt.lat, pt.lon], 16, { duration: 0.6 });
+                };
                 listEl.appendChild(card);
             });
         }
 
-        // 시뮬레이션 모드 토글
-        function toggleSimulationMode() {
-            isSimMode = !isSimMode;
-            const box = document.getElementById('sim-slider-box');
-            const btn = document.getElementById('sim-toggle-btn');
-            if (isSimMode) {
-                box.classList.add('show');
-                btn.innerText = "✖ 테스트 종료";
-                onSimTimeChange(document.getElementById('time-slider').value);
-            } else {
-                stopAutoPlay();
-                box.classList.remove('show');
-                btn.innerText = "⚡ 가상 주행 테스트 켜기";
-                renderRunnerList();
-            }
-            updateStatusBanner();
-        }
-
-        function onSimTimeChange(val) {
-            document.getElementById('sim-clock').innerText = secToTime(parseInt(val));
+        function setTracking(bib) {
+            trackingBib = bib;
+            updateTrackingButtonUI();
             renderRunnerList();
         }
 
-        function toggleAutoPlay() {
-            if (playTimer) {
-                stopAutoPlay();
-            } else {
-                document.getElementById('auto-play-btn').innerText = "⏸ 정지";
-                playTimer = setInterval(() => {
-                    const slider = document.getElementById('time-slider');
-                    let next = parseInt(slider.value) + 180;
-                    if (next > parseInt(slider.max)) next = parseInt(slider.min);
-                    slider.value = next;
-                    onSimTimeChange(next);
-                }, 400);
-            }
-        }
-
-        function stopAutoPlay() {
-            if (playTimer) clearInterval(playTimer);
-            playTimer = null;
-            document.getElementById('auto-play-btn').innerText = "▶ 재생";
-        }
-
-        function toggleSheetExpand() {
-            document.getElementById('bottom-sheet').classList.toggle('expanded');
-        }
-
-        // 초기 실행 (2026 춘천마라톤 기본 선택)
-        selectEvent(EVENTS[0]);
+        buildCourse();
+        renderRunnerList();
     </script>
 </body>
 </html>
